@@ -1,19 +1,101 @@
-.board {
+:root {
+    --WIDTH: 8;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    font-family: sans-serif;
+}
+
+.game-board {
     display: grid;
-    grid-template-columns: repeat(8, 50px);
-    gap: 2px;
-    width: fit-content;
-    margin: auto;
-    padding: 20px;
+    grid-template-columns: repeat(8, 60px);
+    grid-template-rows: repeat(8, 60px);
+    gap: 3px;
+    background-color: #b3e5fc;
+    border: 5px solid #0277bd;
+    border-radius: 10px;
+    padding: 5px;
+    position: relative;
+
+    /* 8 * 60px + 7 * 3px */
+    width: 501px;
+    height: 501px;
+    box-sizing: content-box;
 }
 
-.candy {
-    width: 50px;
-    height: 50px;
-    border-radius: 10%;
+.tile {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
     cursor: grab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s ease-in-out, opacity 0.2s ease-in-out, box-shadow 0.15s ease-in-out, filter 0.15s ease-in-out;
+    user-select: none;
 }
 
-.candy:active {
-    cursor: grabbing;
+.tile[data-dragging="true"] {
+    opacity: 0.6;
+    transform: scale(0.9);
+    box-shadow: 0 0 15px yellow;
+}
+
+.tile[draggable="true"]:not(.disabled):hover {
+    filter: brightness(1.15);
+    transform: scale(1.1);
+    box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.3), 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+
+
+h2 {
+    color: #01579b;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    width: 300px;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #01579b;
+}
+
+.game-info span {
+    background-color: #e1f5fe;
+    padding: 5px 15px;
+    border-radius: 8px;
+    border: 1px solid #0277bd;
+    min-width: 100px;
+    text-align: center;
+}
+
+.game-over-message {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    font-size: 1.6em;
+    color: #d32f2f;
+    font-weight: bold;
+    text-align: center;
+}
+
+.game-won-message {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    font-size: 1.6em;
+    color: #1bf378;
+    font-weight: bold;
+    text-align: center;
+}
+
+.tile.disabled {
+    cursor: not-allowed;
+
 }

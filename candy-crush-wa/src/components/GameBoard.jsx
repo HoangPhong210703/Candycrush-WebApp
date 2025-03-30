@@ -1,105 +1,155 @@
-import { useState, useEffect, useCallback } from "react";
-import "./GameBoard.css";
 
-const size = 8;
-const candyColors = ["red", "blue", "green", "yellow", "purple", "orange"];
+import React, { useState, useEffect, useCallback } from 'react';
+import './GameBoard.css';
+import {
+    WIDTH,
+    CANDY_COLORS,
+    delay,
+    findMatches,
+    createInitialBoard,
+    clearMatchesOnBoard,
+    handleGravityAndRefill,
+    MOVES_LEFT,
+    GOAL_SCORE
+} from '../utils/GameLogic.jsx'; 
 
-const createBoard = () => {
-    return Array.from({ length: size * size }, () =>
-        candyColors[Math.floor(Math.random() * candyColors.length)]
-    );
-};
+function GameBoard() {
+    const [board, setBoard] = useState(() => createInitialBoard());
+    const [draggedTile, setDraggedTile] = useState(null);
+    const [replacedTile, setReplacedTile] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [score, setScore] = useState(0);
+    const [movesLeft, setMovesLeft] = useState(MOVES_LEFT);
+    const [gameOver, setGameOver] = useState(false);
+    const [gameWon, setGameWon] = useState(false); 
 
-export default function GameBoard() {
-    const [board, setBoard] = useState(createBoard);
-    const [draggedCandy, setDraggedCandy] = useState(null);
-    const [replacedCandy, setReplacedCandy] = useState(null);
+    const handleDragStart = (index) => {
+        if (isProcessing || gameOver || gameWon || movesLeft <= 0) { 
+            return;
+        }
+        setDraggedTile(index);
+    };
 
-    const checkMatches = useCallback(() => {
-        let newBoard = [...board];
-        let matchesFound = false;
+    const handleDrop = (index) => {
+        if (isProcessing || gameOver || gameWon || movesLeft <= 0) { 
+            return;
+        }
+        setReplacedTile(index);
+    };
 
-        // Check for horizontal matches
-        for (let i = 0; i < size * size; i++) {
-            if (i % size > size - 3) continue;
-            const row = [i, i + 1, i + 2];
-            if (row.every(index => newBoard[index] && newBoard[index] === newBoard[i])) {
-                row.forEach(index => newBoard[index] = "");
-                matchesFound = true;
-            }
+    const handleDragEnd = useCallback(async () => {
+        if (isProcessing || draggedTile === null || replacedTile === null || gameOver || gameWon || movesLeft <= 0) { 
+            setDraggedTile(null);
+            setReplacedTile(null);
+            return;
         }
 
-        // Check for vertical matches
-        for (let i = 0; i < size * (size - 2); i++) {
-            const column = [i, i + size, i + size * 2];
-            if (column.every(index => newBoard[index] && newBoard[index] === newBoard[i])) {
-                column.forEach(index => newBoard[index] = "");
-                matchesFound = true;
-            }
+        const currentDraggedIndex = draggedTile;
+        const currentReplacedIndex = replacedTile;
+        const validMoves = [
+            currentDraggedIndex - 1, currentDraggedIndex + 1,
+            currentDraggedIndex - WIDTH, currentDraggedIndex + WIDTH,
+        ];
+        const isValidMove = validMoves.includes(currentReplacedIndex);
+        const isSameColor = board[currentDraggedIndex] === board[currentReplacedIndex];
+
+        if (!isValidMove || isSameColor) {
+            setDraggedTile(null);
+            setReplacedTile(null);
+            return;
         }
 
-        if (matchesFound) {
-            setBoard(newBoard);
+        let tempBoard = [...board];
+        [tempBoard[currentDraggedIndex], tempBoard[currentReplacedIndex]] = [tempBoard[currentReplacedIndex], tempBoard[currentDraggedIndex]];
+
+        const matchesAfterSwap = findMatches(tempBoard);
+
+        if (matchesAfterSwap.size > 0) {
+            setMovesLeft(prevMoves => prevMoves - 1); 
+            setBoard(tempBoard);
+            setDraggedTile(null);
+            setReplacedTile(null);
+
+            await handleGameCycle(tempBoard);
+        } else {
+
+            setDraggedTile(null);
+            setReplacedTile(null);
         }
-    }, [board]);
 
-    const dropCandies = useCallback(() => {
-        let newBoard = [...board];
+    }, [board, draggedTile, replacedTile, isProcessing, movesLeft, gameOver, gameWon]); 
 
-        for (let i = size * size - 1; i >= 0; i--) {
-            if (newBoard[i] === "") {
-                if (i >= size) {
-                    newBoard[i] = newBoard[i - size];
-                    newBoard[i - size] = "";
-                } else {
-                    newBoard[i] = candyColors[Math.floor(Math.random() * candyColors.length)];
-                }
-            }
+
+    const handleGameCycle = useCallback(async (currentBoard) => {
+        setIsProcessing(true);
+        let boardAfterCycle = [...currentBoard];
+        let currentMatches = findMatches(boardAfterCycle);
+
+        while (currentMatches.size > 0) {
+            setScore(prevScore => prevScore + currentMatches.size * 100);
+            await delay(250);
+            boardAfterCycle = clearMatchesOnBoard(boardAfterCycle, currentMatches);
+            setBoard(boardAfterCycle);
+            await delay(250);
+            boardAfterCycle = handleGravityAndRefill(boardAfterCycle);
+            setBoard(boardAfterCycle);
+            currentMatches = findMatches(boardAfterCycle);
         }
 
-        setBoard(newBoard);
-    }, [board]);
+        setIsProcessing(false);
+
+        // if (movesLeft <= 0 && score < GOAL_SCORE) {
+        //     setGameOver(true);
+        // }
+
+    }, []); 
+
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            checkMatches();
-            dropCandies();
-        }, 300);
+        if (!isProcessing && movesLeft <= 0) {
+            if (score < GOAL_SCORE) {
+                setGameOver(true);
+                console.log("useEffect: Game Over set");
+            } else {
+                setGameWon(true); 
+                console.log("useEffect: Game Won set");
+            }
+        }
+    }, [movesLeft, score, isProcessing]); 
 
-        return () => clearInterval(timer);
-    }, [checkMatches, dropCandies]);
 
     return (
-        <div className="board">
-            {board.map((color, index) => (
-                <div
-                    key={index}
-                    className="candy"
-                    style={{ backgroundColor: color }}
-                    draggable
-                    onDragStart={() => setDraggedCandy(index)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => setReplacedCandy(index)}
-                    onDragEnd={() => {
-                        if (draggedCandy !== null && replacedCandy !== null) {
-                            const validMoves = [
-                                draggedCandy - 1, 
-                                draggedCandy + 1, 
-                                draggedCandy - size, 
-                                draggedCandy + size,
-                            ];
+        <div className="game-container">
+            <h2>Candy Crush</h2>
+            <div className="game-info">
+                <span>Score: {score}</span>
+                <span>Moves: {movesLeft}</span>
+            </div>
+            {}
+            {gameOver && <div className="game-over-message">Game Over</div>}
+            {gameWon && <div className="game-won-message">You Win</div>}
 
-                            if (validMoves.includes(replacedCandy)) {
-                                let newBoard = [...board];
-                                [newBoard[draggedCandy], newBoard[replacedCandy]] = [newBoard[replacedCandy], newBoard[draggedCandy]];
-                                setBoard(newBoard);
-                            }
-                        }
-                        setDraggedCandy(null);
-                        setReplacedCandy(null);
-                    }}
-                />
-            ))}
+            <div className="game-board">
+                {board.map((candyColor, index) => (
+                    <div
+                        key={index}
+                        className={`tile ${isProcessing || gameOver || gameWon ? 'disabled' : ''}`} 
+                        style={{
+                            backgroundColor: candyColor ? candyColor : '#e0e0e0',
+                        }}
+                        draggable={!isProcessing && !gameOver && !gameWon} 
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => handleDrop(index)}
+                        onDragEnd={handleDragEnd}
+                        data-dragging={draggedTile === index}
+                    >
+                        {}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
+
+export default GameBoard;
