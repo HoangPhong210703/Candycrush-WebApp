@@ -5,5 +5,6 @@ Mục tiêu của game: đạt được nhiều hơn GOAL_SCORE điểm trong MO
 
 
 // src/components/GameLogic.jsx
+
 export const MOVES_LEFT = 2;
 export const GOAL_SCORE = 100;
