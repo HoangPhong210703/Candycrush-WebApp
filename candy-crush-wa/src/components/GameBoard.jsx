@@ -98,9 +98,7 @@ function GameBoard() {
 
         setIsProcessing(false);
 
-        // if (movesLeft <= 0 && score < GOAL_SCORE) {
-        //     setGameOver(true);
-        // }
+      
 
     }, []); 
 

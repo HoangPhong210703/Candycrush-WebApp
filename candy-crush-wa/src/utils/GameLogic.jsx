@@ -76,7 +76,7 @@ export const clearMatchesOnBoard = (board, matches) => {
 
 export const handleGravityAndRefill = (board) => {
     let newBoard = [...board];
-    // Gravity
+    // 
     for (let c = 0; c < WIDTH; c++) {
         let lowestEmptyIdx = -1;
         for (let r = WIDTH - 1; r >= 0; r--) {
